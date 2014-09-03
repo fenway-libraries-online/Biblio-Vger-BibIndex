@@ -1,0 +1,127 @@
+#!/m1/shared/bin/perl
+
+use strict;
+use warnings;
+
+use MARC::Loop qw(marcloop marcbuild marcfield TAG DELETE);
+use Biblio::Vger;
+use Biblio::Vger::BibIndex;
+use Text::Balanced;
+use Getopt::Long
+    qw(:config posix_default gnu_compat require_order bundling no_ignore_case);
+
+sub sum(@);
+
+my ($mish_out, $include_mfhds, $embed_scores);
+GetOptions(
+    'Z' => \$mish_out,
+    'H' => \$include_mfhds,
+    'e' => \$embed_scores,
+) or usage();
+
+die "Not yet implemented" if $mish_out;
+
+my %match;
+foreach (@ARGV) {
+    my $m = parse_matchpoint($_);
+    $match{$m->{'code'}} = $m;
+}
+
+my $idx = Biblio::Vger::BibIndex->new(%match);
+my $recnum = 0;
+
+marcloop {
+    $recnum++;
+    my ($leader, $fields) = @_;
+    my $matches = $idx->find($leader, $fields);
+    my @bibs  = keys %$matches;
+    my %score;
+    foreach my $bib (sort { $a <=> $b } @bibs) {
+        my %tally;
+        my $match = $matches->{$bib};
+        while (my ($code, $values) = each %$match) {
+            while (my ($value, $matchpoint) = each %$values) {
+                my ($weight, $label, $descrip, $max) = @$matchpoint{qw(weight label description maximum)};
+                # push @scores, [ $weight, $value, $matchpoint ];
+                $label ||= $code;
+                my $n = $tally{$label} += $weight;
+                $tally{$label} = $max if defined($max) && $n > $max;
+            }
+        }
+        my $score = sum values %tally;
+        $score{$bib} = $score;
+    }
+    output($leader, $fields, \%score);
+} \*STDIN, 'error' => sub { die "Fatal error at record $.: $@\n" };
+
+sub output {
+    my ($leader, $fields, $scores) = @_;
+    my @bibs = sort { $scores->{$b} <=> $scores->{$a} } keys %$scores;
+    if ($embed_scores) {
+        $_->[DELETE] = 1 for grep { $_->[TAG] eq '951' } @$fields;
+        foreach (@bibs) {
+            push @$fields, marcfield('951', ' ', ' ', (
+                'a' => $_,
+                's' => $scores->{$_},
+            ));
+        }
+        print marcbuild($leader, $fields);
+    }
+    else {
+        print $recnum, ' ', join(' ', map { sprintf '%s:%d', $scores->{$_}, $_ } @bibs), "\n";
+    }
+}
+
+sub sum(@) {
+    my $n = 0;
+    $n += $_ for @_;
+    return $n;
+}
+
+sub excluder {
+    ;
+}
+
+sub parse_matchpoint {
+    local $_ = shift;
+    my %m = ('weight' => 1, 'maximum' => 2**31, 'minimum' => 1, 'label' => $_);
+    s/^\s+match(?:point)?\s+//;
+    $m{'label'} = $1 if s/^"([^"]+)"\s+//;
+    s/^(?:index\s+)?([^=:!]\S{3})\s*// or usage();
+    $m{'code'} = $1;
+    $m{'first'} = 1 if s/^\[1\]//;
+    while (1) {
+        s/^\s+//;
+        last if !length;
+        if (s/^(?:weight\s+|=\s*)(-?\d+)//) {
+            $m{'weight'} = $1;
+        }
+        elsif (s/^(?:override\s+|:\s*)(.{3,4})//) {
+            $m{'override'} = $1;
+        }
+        elsif (my $cond = extract_delimited(undef, '{}')) {
+            $cond =~ s/^{\s*|\s*}$//g;
+            push @{ $m{'conditions'} ||= [] }, parse_condition($cond);
+        }
+        elsif (s/^[!]\s*(.+)//) {
+            $m{'exclude'} = excluder("!/$1/");
+        }
+        elsif (s/^,?\s*(min|max)(?:imum)?\s+(\d+)//) {
+            $m{$1.'imum'} = $1;
+        }
+        else {
+            die;
+        }
+    }
+    return ($m{'code'}, \%m);
+}
+__END__
+matchpoint index 0350 weight 100
+0350 = 100
+
+matchpoint 0350 weight 100 max 100
+0350 = 100 max 100
+
+matchpoint 0350 { matching /^\(OCoLC\)/ }
+0350 = 100
+0350 =
