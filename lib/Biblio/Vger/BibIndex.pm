@@ -21,7 +21,7 @@ my @all_index_codes = qw(
     008D 008L 008P 010A 010Z 019A 020A 020N 020R 020Z 022A 022Y 022Z 024A 024I
     024Y 024Z 027A 028A 028B 030A 030Z 0350 0359 035A 035Z 074A 074Z 100H 110H
     111H 1300 1301 1302 2100 2110 2120 2140 2220 2400 2401 2402 2450 2451 2452 2460 2470
-    260D 4400 440A 600H 600T 610H 611H 630H 648H 6500 6501 6502 6503 6504 6505
+    260D 336B 337B 338B 4400 440A 600H 600T 610H 611H 630H 648H 6500 6501 6502 6503 6504 6505
     6506 6507 651H 654H 655H 6900 700H 700X 710H 710X 711H 711X 7300 7301 7302
     7400 7401 7402 7600 7620 7670 7720 7721 7730 7731 7800 7850 8000 800H 8100
     810H 8110 811H 8300 8301 8302 ISB3
@@ -292,6 +292,10 @@ sub index_2452 { index_title_field(@_, '245', qw(a b h)) }
 sub index_2460 { index_data_field(@_, '246', qw(a b f g h n p)) }
 sub index_2470 { index_data_field(@_, '247', qw(a b f g h n p x)) }
 sub index_260D { index_data_field(@_, '260', qw(d)) }  # Obsolete
+
+sub index_336B { index_data_field(@_, '336', qw(b)) }
+sub index_337B { index_data_field(@_, '337', qw(b)) }
+sub index_338B { index_data_field(@_, '338', qw(b)) }
 
 sub index_600H { index_data_field(@_, '600', qw(a b c d f g k l m n o p q r t v x y z)) }
 sub index_600T { index_data_field(@_, '600', qw(t)) }
