@@ -6,6 +6,10 @@ use warnings;
 use MARC::Loop qw(TAG IND1 IND2 VALREF SUBS SUB_ID SUB_VALREF);
 use Biblio::Vger;
 
+use vars qw($VERSION);
+
+$VERSION = '0.02';
+
 # my $index = Biblio::Vger::BibIndex->new(
 #     '020A' => 50,
 #     'BBID' => { 'weight' => 100, 'override' => '951a' },
@@ -408,7 +412,7 @@ sub norm_value {
     my ($str) = @_;
     $str =~ tr{'}{}d;
     $str =~ tr{-=./()[],:;"?!}{ };
-    $str =~ s/[^[:alpha] ]//g;
+    $str =~ s/[^[:alpha:] ]//g;
     $str =~ tr{ }{}s;
     $str =~ s/^ | $//g;
     $str =~ s/\xc5[\x81-\x82]/L/g;  # LATIN CAPITAL/SMALL LETTER L WITH STROKE
@@ -420,7 +424,7 @@ sub norm_control_value {
     my ($str) = @_;
     $str =~ tr{'}{}d;
     $str =~ tr{=./()[],:;"?}{ };
-    $str =~ s/[^[:alpha] ]//g;
+    $str =~ s/[^[:alpha:] ]//g;
     $str =~ tr{ }{}s;
     $str =~ s/^ | $//g;
     $str =~ s/[^\x20-\x7e]//g;
